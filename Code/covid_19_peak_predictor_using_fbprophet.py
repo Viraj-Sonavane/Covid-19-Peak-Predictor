@@ -43,6 +43,9 @@ import missingno as msno
 import geopandas as gpd
 from pandas import DataFrame
 from pandas import to_datetime
+import ast
+
+
 
 import seaborn as sns
 sns.set_style('whitegrid')
@@ -90,6 +93,10 @@ pd.set_option('display.max_rows',None)
 #Total rows
 cdata.shape
 
+len(cdata.index)
+
+len(cdata.columns)
+
 #Checking for null values
 cdata.isnull().sum()
 
@@ -126,16 +133,28 @@ sns.heatmap(cdata.isnull(), cbar=False)
 cdata['location'].unique()
 
 #Ploting location vs new cases per million
-plt.figure(figsize=(150,30))
+plt.figure(figsize=(15,10))
 plt.title("New cases per million in different nation",fontsize='14',loc='left')
-sns.lineplot(data=cdata[cdata['location'].isin(['United States','Israel','United Kingdom','Europe'])].sort_values(by='date'), x='date', y='new_cases',hue='location')
+graph = sns.lineplot(data=cdata[cdata['location'].isin(['Norway'])].sort_values(by='date'), x='date', y='new_cases_per_million',hue='location')
+graph.xaxis.set_major_locator(mdates.DayLocator(interval = 60))
 plt.xticks(rotation = 'vertical')
 plt.show()
 
 #Plotting People fully vaccinated in USA
-plt.figure(figsize=(15,15))
-plt.title("People fully vaccinated in USA",fontsize='14',loc='left')
-sns.lineplot(data=cdata[cdata['location'].isin(['United States'])].sort_values(by='date'), x='people_fully_vaccinated', y='new_cases',hue='location')
+plt.figure(figsize=(20,5))
+plt.title("Positive rate vs New cases per million",fontsize='14',loc='left')
+sns.lineplot(data=cdata[cdata['location'].isin(['United States','Germany','United Kingdom','Europe','Israel','Indonesia'])].sort_values(by='date'), x='positive_rate', y='new_cases_per_million',hue='location')
+plt.show()
+
+#Plotting People fully vaccinated in USA
+plt.figure(figsize=(20,5))
+plt.title("Strigency index vs New cases per million",fontsize='14',loc='left')
+sns.lineplot(data=cdata[cdata['location'].isin(['United States','Germany','United Kingdom','Europe','Israel','Indonesia'])].sort_values(by='date'), x='stringency_index', y='new_cases_per_million',hue='location')
+plt.show()
+
+plt.figure(figsize=(20,5))
+plt.title("Strigency index vs Positive rate",fontsize='14',loc='left')
+sns.lineplot(data=cdata[cdata['location'].isin(['United States','Germany','United Kingdom','Europe','Israel','Indonesia','Australia'])].sort_values(by='date'), x='stringency_index', y='positive_rate',hue='location')
 plt.show()
 
 #Plotting WORLDMAP for Stringency index
@@ -155,12 +174,12 @@ def graph_world(feature):
     vmin, vmax = 0,100
     fig, ax = plt.subplots(1, figsize=(25,25))
 
-    merged.plot(column=to_be_mapped, cmap='viridis', linewidth=0.8, ax=ax, edgecolors='0.8' , legend=True,
-                legend_kwds={'label': "stringency_index", 'orientation': "horizontal"})
-    ax.set_title('Covid_Restriction', fontdict={'fontsize':20})
+    merged.plot(column=to_be_mapped, cmap='RdYlGn', linewidth=0.8, ax=ax, edgecolors='1' , legend=True,
+                legend_kwds={'label': "new_cases_per_million", 'orientation': "horizontal"})
+    ax.set_title('New cases per million', fontdict={'fontsize':20})
 
 #Plotting WORLDMAP for Stringency index
-graph_world('stringency_index')
+graph_world('new_cases_per_million')
 
 #Plotting Stringency index in different nations
 plt.figure(figsize=(150,30))
@@ -168,6 +187,8 @@ plt.title('Stringency index in different nations',fontsize = 20,loc='left')
 sns.lineplot(data=cdata[cdata['location'].isin(['United States','Israel','United Kingdom','Europe','Australia'])].sort_values(by='date'), x='stringency_index', y='new_cases',hue='location')
 plt.xticks(rotation = 'vertical')
 plt.show()
+
+
 
 #Plotting Positive rate in different nations
 plt.figure(figsize=(150,30))
@@ -190,7 +211,9 @@ def forecast(nation):
   model.plot(pred);
   model.plot_components(pred);
 
-m = forecast('Japan');
+
+
+m = forecast('Norway');
 
 #future = list()
 #for i in range(1, 13):
@@ -235,6 +258,12 @@ def forecast2(nation):
   #future2['people_vaccinated_per_hundred'] = temp['people_vaccinated_per_hundred']
 
 #FBProphet model without regressor
+from fbprophet.diagnostics import cross_validation
+from fbprophet.diagnostics import performance_metrics
+from fbprophet.plot import plot_cross_validation_metric
+import itertools
+
+
 def forecast3(nation):
   data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
   data.columns = ['ds','y']
@@ -244,6 +273,11 @@ def forecast3(nation):
   future = model.make_future_dataframe(periods=365, freq='D')
   pred = model.predict(future)
   model.plot(pred);
+
+  df_cv = cross_validation(model, initial='365 days', period='90 days', horizon = '200 days')
+  df_p = performance_metrics(df_cv)
+  #print(df_p))
+  fig3 = plot_cross_validation_metric(df_cv, metric='rmse')
 
 #List of countries with high new cases, positive rate and people_fully_vaccinated_per_hundred
 clist = cdata.sort_values(by="new_cases_per_million",ascending=False)
@@ -276,6 +310,126 @@ def forecast4(nation):
   pred = model.predict(future)
   model.plot(pred);
 
-forecast2('Japan')
-forecast3('Japan')
-forecast4('Japan')
+forecast2('Italy')
+forecast3('Italy')
+forecast4('Italy')
+
+"""# Hyper-parameter Tunning
+
+"""
+
+def Tunning(nation):  
+  data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
+  data.columns = ['ds','y']
+
+  def create_param_combinations(**param_dict):
+    param_iter = itertools.product(*param_dict.values())
+    params =[]
+    for param in param_iter:
+        params.append(param) 
+    params_df = pd.DataFrame(params, columns=list(param_dict.keys()))
+    return params_df
+
+  def single_cv_run(history_df, metrics, param_dict):
+    m = Prophet(**param_dict)
+    m.fit(history_df)
+    df_cv = cross_validation(m, initial='400 days', period='90 days', horizon = '180 days')
+    df_p = performance_metrics(df_cv).mean().to_frame().T
+    df_p['params'] = str(param_dict)
+    #df_p = df_p.loc[:, metrics]
+    df_p = df_p.reindex(columns = metrics)
+    return df_p
+
+  param_grid = {  
+                'changepoint_prior_scale': [0.005, 0.05, 0.5, 5],
+                'changepoint_range': [0.8, 0.9],
+                'seasonality_prior_scale':[0.1, 1, 10.0],
+                'seasonality_mode': ['multiplicative', 'additive'],
+                'growth': ['linear'],
+                'yearly_seasonality': [5, 10, 20]
+              }
+
+  metrics = ['horizon', 'rmse', 'mape', 'params'] 
+  results = []
+  params_df = create_param_combinations(**param_grid)
+  for param in params_df.values:
+    param_dict = dict(zip(params_df.keys(), param))
+    cv_df = single_cv_run(data,  metrics, param_dict)
+    results.append(cv_df)
+  results_df = pd.concat(results).reset_index(drop=True)
+  best_param = results_df.loc[results_df['mape'] == min(results_df['mape']), ['params']]
+  print(f'\n The best param combination is {best_param.values[0][0]}')
+  m = best_param.values[0][0]
+  return m
+
+from fbprophet.diagnostics import cross_validation
+from fbprophet.diagnostics import performance_metrics
+from fbprophet.plot import plot_cross_validation_metric
+import itertools
+
+def final_forecast(nation):
+  q = Tunning(nation)
+  #print("Q:",q)
+  n = ast.literal_eval(q)
+  m = ast.literal_eval(q)
+  dd = []
+  for key, value in m.items():
+    print(str(key), str(value))
+    dd.append((key,value))
+
+  changepoint_prior_scale = dd[0][0]
+  changepoint_prior_scale_no = dd[0][1]
+
+  changepoint_range = dd[1][0]
+  changepoint_range_no = dd[1][1]
+
+  seasonality_prior_scale = dd[2][0]
+  seasonality_prior_scale_no = dd[2][1]
+
+  seasonality_mode = dd[3][0]
+  seasonality_mode_no = dd[3][1]
+
+  growth = dd[4][0]
+  growth_no = dd[4][1]
+
+  yearly_seasonality = dd[5][0]
+  yearly_seasonality_no = dd[5][1]
+
+  def forecast5(nation):
+    data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
+    data.set_index('date', inplace=True)
+    c = data.loc['0':'2021-04-30']
+    df = c.reset_index()
+    df.columns = ['ds','y']
+    model = Prophet(changepoint_prior_scale= changepoint_prior_scale_no, changepoint_range= changepoint_range_no, seasonality_prior_scale= seasonality_prior_scale_no, seasonality_mode= seasonality_mode_no, growth= growth_no, yearly_seasonality= yearly_seasonality_no)
+    model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+    model.fit(df)
+    future = model.make_future_dataframe(periods=365, freq='D')
+    pred = model.predict(future)
+    model.plot(pred);
+
+
+  def forecast6(nation):
+    data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
+    data.columns = ['ds','y']
+    model = Prophet(changepoint_prior_scale= changepoint_prior_scale_no, changepoint_range= changepoint_range_no, seasonality_prior_scale= seasonality_prior_scale_no, seasonality_mode= seasonality_mode_no, growth= growth_no, yearly_seasonality= yearly_seasonality_no)
+    model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+    model.fit(data)
+    future = model.make_future_dataframe(periods=365, freq='D')
+    pred = model.predict(future)
+    model.plot(pred);
+
+    df_cv = cross_validation(model, initial='365 days', period='90 days', horizon = '200 days')
+    df_p = performance_metrics(df_cv)
+    fig = plot_cross_validation_metric(df_cv, metric='rmse')
+
+  forecast5(nation)
+  forecast6(nation)
+
+clist = cdata.sort_values(by="new_cases_per_million",ascending=False)
+clist2 = clist.sort_values(by="people_fully_vaccinated_per_hundred",ascending=False)
+clist2 = clist.sort_values(by="positive_rate",ascending=False)
+clist2['location'].head(5000).unique()
+
+#Tunning('Thailand')
+final_forecast('Italy')
