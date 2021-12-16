@@ -1,11 +1,11 @@
-geopandas = "*"
-keras= "*"
-matplotlib = "*"
-numpy = "*"
-pandas= "*"
-plotly= "*"
-pmdarima= "*"
-scikit_learn= "*"
-seaborn= "*"
-streamlit= "*"
-fbprophet= "*"
+geopandas
+keras
+matplotlib
+numpy
+pandas
+plotly
+pmdarima
+scikit_learn
+seaborn
+streamlit
+fbprophet
