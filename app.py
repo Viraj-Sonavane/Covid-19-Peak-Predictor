@@ -49,15 +49,12 @@ cdata.fillna(0,inplace=True)
 
 cnation = (cdata['location'].unique())
 selected_nation = st.selectbox('Select nation for prediction', cnation)
-
-n_years = st.slider('Months of prediction:', 1, 12)
-period = n_years * 30
+#@st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
 
 #----------------------------------------------------------------------------------------------------------------------------------#
 #Data Interpolation
 #----------------------------------------------------------------------------------------------------------------------------------#
 #Ploting location vs new cases per million
-@st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
 def Data_analysis(nation):
     def NewCases(nation):    
         fig = plt.figure(figsize=(5,5))
@@ -90,14 +87,16 @@ def Data_analysis(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 #Basic FBProphet Model
 #----------------------------------------------------------------------------------------------------------------------------------#
-@st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
 def FBProphet_forecast(nation):
+  n_years = st.slider('Months of prediction:', 12, 1)
+  period = n_years * 30
+
   data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
   data.columns = ['ds','y']
   model = Prophet(daily_seasonality=False,weekly_seasonality=False,yearly_seasonality=True,interval_width=0.95)
   model.add_seasonality(name='monthly', period=30.5, fourier_order=5)
   model.fit(data)
-  future = model.make_future_dataframe(periods=365, freq='D')
+  future = model.make_future_dataframe(periods=period, freq='D')
   pred = model.predict(future)
   model.plot(pred);
   model.plot_components(pred);
@@ -113,6 +112,8 @@ def FBProphet_forecast(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 #FBprophet Model Hyperparameter Tunning
 #----------------------------------------------------------------------------------------------------------------------------------#
+
+
 @st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
 def Tunning(nation):  
     data = cdata[cdata['location'].isin([nation])].sort_values(by="date")[['date',"new_cases_per_million"]]
@@ -161,6 +162,9 @@ def Tunning(nation):
 
 #FBProphet Model Build
 def Final_FBProphe_Forecast(nation):
+    n_years = st.slider('Months of prediction:', 12, 1)
+    period = n_years * 30
+
     q = Tunning(nation)
     n = ast.literal_eval(q)
     m = ast.literal_eval(q)
@@ -212,6 +216,9 @@ def Final_FBProphe_Forecast(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 def LST(nation):
     #Getting Data with respect to countries
+    n_years = st.slider('Months of prediction:', 8, 1)
+    period = n_years * 30
+
     country = nation
     ndata = cdata
     ndata['Date'] = pd.to_datetime(ndata['date'])
@@ -251,7 +258,7 @@ def LST(nation):
     lstm_model.add(Dense(1))
     lstm_model.compile(optimizer= 'Adam', loss= 'mse')
     num_epochs = 500
-    @st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
+    
     def EPC(train,epoc):
         hist = lstm_model.fit(train,epochs=epoc,verbose=2)
         return hist
@@ -320,6 +327,9 @@ def LST(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 
 def ARMA(nation):
+    n_years = st.slider('Months of prediction:', 1, 2)
+    period = n_years * 30
+
     ndata = cdata
     ndata.head(2)
     ndata['Date'] = pd.to_datetime(ndata['date'])
@@ -331,7 +341,6 @@ def ARMA(nation):
 
     fdata = ndata2
 
-    @st.cache(allow_output_mutation=True, show_spinner=True,suppress_st_warning=True)
     def models(fdata1):
         model = pm.auto_arima(fdata1, start_p=1, start_q=1,
                          test='adf',
@@ -346,7 +355,7 @@ def ARMA(nation):
 
     smodel = models(fdata)
 
-    n_periods = period
+    n_periods = period - 20
     fitted, confint = smodel.predict(n_periods=n_periods, return_conf_int=True)
     index_of_fc = pd.date_range(fdata.index[-1], periods = n_periods, freq='W')
 
@@ -369,13 +378,10 @@ def ARMA(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 #Calling Models
 #----------------------------------------------------------------------------------------------------------------------------------#
-with st.spinner('Loading the prediction please wait.....'):
+with st.spinner('Loading the prediction please wait.....this may take a while'):
     if (add_selectbox=='LSTM'):
-        try:
-            LST(selected_nation)
-        except:
-            st.error("Something went wrong while building Model")
-
+        LST(selected_nation)
+       
     if(add_selectbox=='FBProphet'):
         try:
             FBProphet_forecast(selected_nation)
@@ -383,10 +389,8 @@ with st.spinner('Loading the prediction please wait.....'):
             st.error("Something went wrong while building Model")
 
     if(add_selectbox=='Retuned_FBProphet'):
-        try:
-            Final_FBProphe_Forecast(selected_nation)   
-        except:
-            st.error("Something went wrong while building Model")
+        Final_FBProphe_Forecast(selected_nation)   
+        
 
     if(add_selectbox=='ARIMA'):
         try:
@@ -396,7 +400,6 @@ with st.spinner('Loading the prediction please wait.....'):
 
     if(add_selectbox=='None'):
             Data_analysis(selected_nation)  
-       
             
 st.success('Success!')
 
