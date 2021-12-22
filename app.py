@@ -378,25 +378,30 @@ def ARMA(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 #Calling Models
 #----------------------------------------------------------------------------------------------------------------------------------#
-with st.spinner('Loading the prediction please wait.....this may take a while'):
+with st.spinner('Loading the predictions...please wait.....this may take a while'):
     if (add_selectbox=='LSTM'):
-        LST(selected_nation)
-       
+        try:
+            LST(selected_nation)
+        except:
+            st.error("Something went wrong while building the Model")
+        
     if(add_selectbox=='FBProphet'):
         try:
             FBProphet_forecast(selected_nation)
         except:
-            st.error("Something went wrong while building Model")
+            st.error("Something went wrong while building the Model")
 
     if(add_selectbox=='Retuned_FBProphet'):
-        Final_FBProphe_Forecast(selected_nation)   
+        try:
+            Final_FBProphe_Forecast(selected_nation)   
+        except:
+            st.error("Something went wrong while building the Model")
         
-
     if(add_selectbox=='ARIMA'):
         try:
             ARMA(selected_nation)  
         except:
-            st.error("Something went wrong while building Model")
+            st.error("Something went wrong while building the Model")
 
     if(add_selectbox=='None'):
             Data_analysis(selected_nation)  
