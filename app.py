@@ -218,7 +218,7 @@ def LST(nation):
     #Getting Data with respect to countries
     n_years = st.slider('Months of prediction:', max_value=8, min_value=1,value=5)
     period = n_years * 30
-    st.info("Note: For a flat forecast....try moving the slider to improve accuracy of the forecast")
+    st.info("Note: For a flat forecast....move the slider to improve the accuracy of forecast")
     country = nation
     ndata = cdata
     ndata['Date'] = pd.to_datetime(ndata['date'])
