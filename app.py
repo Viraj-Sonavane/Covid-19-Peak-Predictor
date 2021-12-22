@@ -216,9 +216,9 @@ def Final_FBProphe_Forecast(nation):
 #----------------------------------------------------------------------------------------------------------------------------------#
 def LST(nation):
     #Getting Data with respect to countries
-    n_years = st.slider('Months of prediction:', 8, 1)
+    n_years = st.slider('Months of prediction:', max_value=8, min_value=1,value=5)
     period = n_years * 30
-
+    st.info("Note: For a flat forecast....try moving the slider to improve accuracy of the forecast")
     country = nation
     ndata = cdata
     ndata['Date'] = pd.to_datetime(ndata['date'])
